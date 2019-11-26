@@ -1,3 +1,5 @@
+package combatDevoir2
+
 import scala.util.Random
 
 trait Entity {
@@ -14,14 +16,14 @@ trait Entity {
   def Attack(roll : Integer, isMelee : Boolean) : Integer
 }
 
-trait Enemy extends Entity {
-  def speed : Integer
+abstract class Enemy extends Entity {
+  def speed : Integer = 0
 }
 
-trait Ally extends Entity {
+abstract class Ally extends Entity {
 }
 
-class WorgsRider extends Enemy{
+class WorgsRider extends Enemy {
   override def hpMax : Integer = 13 + 2*(rand.nextInt(10) + 1) +2
   override def speed: Integer = 20
   override var hp: Integer = hpMax

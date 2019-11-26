@@ -66,7 +66,7 @@ class Warlord extends Enemy {
   override def rand: Random = new Random()
 
   override def Attack(roll: Integer, isMelee : Boolean): Integer = {
-    var degat = 0;
+    var degat = 0
 
     if(isMelee) {
       degat = rand.nextInt(8) + 11
@@ -98,7 +98,7 @@ class Barbarian extends Enemy {
   override def rand: Random = new Random()
 
   override def Attack(roll: Integer, isMelee : Boolean): Integer = {
-    var degat = 0;
+    var degat = 0
 
     if(isMelee) {
       degat = rand.nextInt(8) + 11
@@ -131,7 +131,7 @@ class SolarAngel extends Ally {
   override def rand: Random = new Random()
 
   override def Attack(roll: Integer, isMelee : Boolean): Integer = {
-    var degat = 0;
+    var degat = 0
 
     if(isMelee) {
       degat = 2*(rand.nextInt(6) + 1) + 18

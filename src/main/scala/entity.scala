@@ -2,6 +2,8 @@ package combatDevoir2
 
 import scala.util.Random
 
+case class entityToFight(entity:Entity, vectorDir:(Float, Float), distance: Float)
+
 trait Entity {
   var hp : Integer
   def posX : Float
@@ -13,32 +15,13 @@ trait Entity {
   def rangeMelee : Integer
   def attackRollDist : Array[Int]
   def attackRollMelee : Array[Int]
-  def attackRoll : Array[(Integer, Integer)]
+  def precision : Array[(Integer, Integer)]
   def treshold : Integer
   def rand : Random
+  def nextActionIsAttack : Boolean
 
+  def Behaviour(): Unit
   def Attack(roll: Integer, isMelee : Boolean): Integer
-  def getPrecision(): Array[(Integer, Integer)] = {
-    var size = if(attackRollMelee.size>attackRollDist.size) attackRollMelee.size else attackRollDist.size
-
-    var result:Array[(Integer, Integer)] = new Array[(Integer, Integer)](size)
-
-    for(i <- 0 to size-1) {
-      var precisionDist = 0
-      var precisionMelee = 0
-
-      if (i < attackRollMelee.size) {
-        precisionMelee = attackRollMelee(i)
-      }
-
-      if (i < attackRollDist.size) {
-        precisionDist = attackRollDist(i)
-      }
-
-      result(i) = (precisionMelee, precisionDist)
-    }
-    result
-  }
   def Attack(roll: Integer): Array[(Integer, Integer)] = {
     var size = if(attackRollMelee.size>attackRollDist.size) attackRollMelee.size else attackRollDist.size
 
@@ -81,9 +64,10 @@ case class WorgsRider(x: Float, y: Float) extends Enemy {
   override def rangeMelee: Integer = 5
   override def attackRollDist: Array[Int] = Array(4)
   override def attackRollMelee: Array[Int] = Array(6)
-  override def attackRoll : Array[(Integer, Integer)] = Array((6, 4))
+  override def precision : Array[(Integer, Integer)] = Array((6, 4))
   override def treshold: Integer = 20
   override def rand: Random = new Random()
+  override def nextActionIsAttack : Boolean = false
 
   override def Attack(roll: Integer, isMelee : Boolean): Integer = {
     var degat = 0;
@@ -103,6 +87,10 @@ case class WorgsRider(x: Float, y: Float) extends Enemy {
 
     degat
   }
+
+  override def Behaviour(): Unit = {
+
+  }
 }
 
 case class Warlord(x: Float, y: Float) extends Enemy {
@@ -117,9 +105,10 @@ case class Warlord(x: Float, y: Float) extends Enemy {
   override def rangeMelee: Integer = 5
   override def attackRollDist: Array[Int] = Array(19)
   override def attackRollMelee: Array[Int] = Array(20, 15, 10)
-  override def attackRoll : Array[(Integer, Integer)] = Array((20, 19), (15, 0), (10, 0))
+  override def precision : Array[(Integer, Integer)] = Array((20, 19), (15, 0), (10, 0))
   override def treshold: Integer = 19
   override def rand: Random = new Random()
+  override def nextActionIsAttack : Boolean = false
 
   override def Attack(roll: Integer, isMelee : Boolean): Integer = {
     var degat = 0
@@ -139,6 +128,10 @@ case class Warlord(x: Float, y: Float) extends Enemy {
 
     degat
   }
+
+  override def Behaviour(): Unit = {
+
+  }
 }
 
 case class Barbarian(x: Float, y: Float) extends Enemy {
@@ -153,9 +146,10 @@ case class Barbarian(x: Float, y: Float) extends Enemy {
   override def rangeMelee: Integer = 5
   override def attackRollDist: Array[Int] = Array(16, 11, 6)
   override def attackRollMelee: Array[Int] = Array(19, 14, 9)
-  override def attackRoll : Array[(Integer, Integer)] = Array((19, 16), (14, 11), (9, 6))
+  override def precision : Array[(Integer, Integer)] = Array((19, 16), (14, 11), (9, 6))
   override def treshold: Integer = 19
   override def rand: Random = new Random()
+  override def nextActionIsAttack : Boolean = false
 
   def Attack(roll: Integer, isMelee: Boolean): Integer = {
     var degat = 0
@@ -175,6 +169,10 @@ case class Barbarian(x: Float, y: Float) extends Enemy {
 
     degat
   }
+
+  override def Behaviour(): Unit = {
+
+  }
 }
 
 case class SolarAngel(x: Float, y: Float) extends Ally {
@@ -190,9 +188,10 @@ case class SolarAngel(x: Float, y: Float) extends Ally {
   override def rangeMelee: Integer = 10
   override def attackRollDist: Array[Int] = Array(35, 30, 25, 20)
   override def attackRollMelee: Array[Int] = Array(31, 26, 21, 16)
-  override def attackRoll : Array[(Integer, Integer)] = Array((31, 35), (26, 30), (21, 25), (16, 20))
+  override def precision : Array[(Integer, Integer)] = Array((31, 35), (26, 30), (21, 25), (16, 20))
   override def treshold: Integer = 20
   override def rand: Random = new Random()
+  override def nextActionIsAttack : Boolean = false
 
   override def Attack(roll: Integer, isMelee : Boolean): Integer = {
     var degat = 0
@@ -212,5 +211,9 @@ case class SolarAngel(x: Float, y: Float) extends Ally {
     if(hp>hpMax) {
       hp = hpMax
     }
+  }
+
+  override def Behaviour(): Unit = {
+
   }
 }

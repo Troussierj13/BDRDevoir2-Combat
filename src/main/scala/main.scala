@@ -23,47 +23,70 @@ case object MainClass extends App {
     sc.setLogLevel("ERROR")
 
     //Ally
-    val angel = new SolarAngel()
+    val angel = new SolarAngel(0, 0)
 
     //Ennemies
-    val warlord = new Warlord()
 
-    val worgsRider1 = new WorgsRider()
-    val worgsRider2 = new WorgsRider()
-    val worgsRider3 = new WorgsRider()
-    val worgsRider4 = new WorgsRider()
-    val worgsRider5 = new WorgsRider()
-    val worgsRider6 = new WorgsRider()
-    val worgsRider7 = new WorgsRider()
-    val worgsRider8 = new WorgsRider()
-    val worgsRider9 = new WorgsRider()
-
-    val barbarian1 = new Barbarian()
-    val barbarian2 = new Barbarian()
-    val barbarian3 = new Barbarian()
-    val barbarian4 = new Barbarian()
-
-    //Distances
-    val distances: HashMap[(Ally, Enemy), Integer] = HashMap(
-      ((angel, barbarian1),120),
-      ((angel, barbarian2),125),
-      ((angel, warlord),180))
+    val barbarian1 = Barbarian(200, 20)
+    val barbarian2 = Barbarian(200, 10)
+    val barbarian3 = Barbarian(200, 0)
+    val barbarian4 = Barbarian(200, -10)
+    val barbarian5 = Barbarian(200, -20)
+    val barbarian6 = Barbarian(200, -30)
 
     //Graph
     val graph: Array[(Entity, Array[Entity])] = Array(
-      (angel, Array(barbarian1, barbarian2)),
+      (angel, Array(barbarian1, barbarian2, barbarian3, barbarian4, barbarian5, barbarian6)),
       (barbarian1, Array(angel)),
-      (barbarian2, Array(angel))
+      (barbarian2, Array(angel)),
+      (barbarian3, Array(angel)),
+      (barbarian4, Array(angel)),
+      (barbarian5, Array(angel)),
+      (barbarian6, Array(angel))
     )
 
     //RDD
     val rdd = sc.makeRDD(graph)
 
     val messageDegatsCrea: RDD[(Array[Entity], degatMessage)] = rdd.flatMap(elem => {
-      var roll = rand.nextInt(20)+1
-      val msgs = new ArrayBuffer[(Array[Entity], degatMessage)]()
+      val roll = rand.nextInt(20)+1
+      var msgs = new ArrayBuffer[(Array[Entity], degatMessage)]()
+      var target = new ArrayBuffer[Entity]()
 
-      msgs += Tuple2(elem._2, degatMessage(roll, (elem._1.rangeMelee, elem._1.rangeDist), elem._1.Attack(roll), elem._1.getPrecision()))
+      var i:Int = 0
+      while(i < elem._1.getPrecision().length && i < elem._2.length) {
+        target += elem._2(i)
+        i += 1
+      }
+
+      msgs += Tuple2(target.toArray, degatMessage(roll, (elem._1.rangeMelee, elem._1.rangeDist), elem._1.Attack(roll), elem._1.getPrecision()))
     }).cache()
+
+    //PRINT
+    PrintRDDMessageCrea(messageDegatsCrea)
+
+  }
+
+  def PrintRDDMessageCrea(rdd:RDD[(Array[Entity], degatMessage)]): Unit = {
+    val prt:RDD[String] = rdd.map(elem => {
+      var msg:String = ""
+
+      msg += "creature : "
+      elem._1.foreach(crea => msg +=  crea.name + " ")
+      msg += "\n"
+      msg += "degatMessage : \n"
+      msg += "\troll :" + elem._2.roll + " \n"
+      msg += "\trange :" + elem._2.range + " \n"
+      msg += "\tdegats : "
+      elem._2.degats.foreach(e =>msg += e + " ")
+      msg += "\n"
+      msg += "\tprecision : "
+      elem._2.precision.foreach(e =>msg += e + " ")
+      msg += "\n"
+
+      msg
+    })
+
+    prt.foreach(println)
   }
 }

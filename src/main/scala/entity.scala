@@ -4,6 +4,9 @@ import scala.util.Random
 
 trait Entity {
   var hp : Integer
+  def posX : Float
+  def posY : Float
+  def name : String
   def hpMax : Integer
   def armor : Integer
   def rangeDist : Integer
@@ -66,7 +69,10 @@ abstract class Enemy extends Entity {
 abstract class Ally extends Entity {
 }
 
-case class WorgsRider() extends Enemy {
+case class WorgsRider(x: Float, y: Float) extends Enemy {
+  override def name : String = "WorgsRider"
+  override def posX: Float = x
+  override def posY: Float = y
   override def hpMax : Integer = 13 + 2*(rand.nextInt(10) + 1) +2
   override def speed: Integer = 20
   override var hp: Integer = hpMax
@@ -99,7 +105,10 @@ case class WorgsRider() extends Enemy {
   }
 }
 
-case class Warlord() extends Enemy {
+case class Warlord(x: Float, y: Float) extends Enemy {
+  override def name : String = "Warlord"
+  override def posX: Float = x
+  override def posY: Float = y
   override def hpMax : Integer = 141 + 13 * (rand.nextInt(10)+1) + 65
   override def speed: Integer = 30
   override var hp: Integer = hpMax
@@ -132,7 +141,10 @@ case class Warlord() extends Enemy {
   }
 }
 
-case class Barbarian() extends Enemy {
+case class Barbarian(x: Float, y: Float) extends Enemy {
+  override def name : String = "Barbarian"
+  override def posX: Float = x
+  override def posY: Float = y
   override def hpMax: Integer = 142 + 11 * (rand.nextInt(12) + 1) + 65
   override def speed: Integer = 40
   override var hp: Integer = hpMax
@@ -165,9 +177,12 @@ case class Barbarian() extends Enemy {
   }
 }
 
-case class SolarAngel() extends Ally {
+case class SolarAngel(x: Float, y: Float) extends Ally {
   def regeneration: Integer = 15
 
+  override def name : String = "SolarAngel"
+  override def posX: Float = x
+  override def posY: Float = y
   override def hpMax : Integer = 363 + 22 *(rand.nextInt(10)+1)+242
   override var hp: Integer = hpMax
   override def armor: Integer = 44

@@ -1,18 +1,26 @@
 package combatDevoir2
 
+import org.apache.spark.{SparkConf, SparkContext, rdd}
 import org.apache.spark.rdd.RDD
 
 import scala.collection.immutable.HashMap
+import scala.collection.mutable.ArrayBuffer
 import scala.util.Random
 
 case object MainClass extends App {
 
   var rand = Random
 
-  case class Adjacent(_1 : Entity, _2 : Entity, dist : Integer)
+  case class degatMessage(roll: Int, range: (Integer, Integer), degats: Array[(Integer, Integer)], precision: Array[(Integer, Integer)])
 
   override def main(args: Array[String]): Unit = {
     super.main(args)
+
+    val conf = new SparkConf()
+      .setAppName("Devoir1 BDR")
+      .setMaster("local[*]")
+    val sc = new SparkContext(conf)
+    sc.setLogLevel("ERROR")
 
     //Ally
     val angel = new SolarAngel()
@@ -48,14 +56,14 @@ case object MainClass extends App {
       (barbarian2, Array(angel))
     )
 
-    graph.foreach(elem => {
-      var tuple: (Ally, Enemy) = Tuple2(null, null)
-      if (elem._1.isInstanceOf[Ally] == true)
-        tuple = Tuple2(elem._1.asInstanceOf[Ally], elem._2(0).asInstanceOf[Enemy])
-      else
-        tuple = Tuple2(elem._2(0).asInstanceOf[Ally], elem._1.asInstanceOf[Enemy])
-      println(distances(tuple))
-    })
+    //RDD
+    val rdd = sc.makeRDD(graph)
 
+    val messageDegatsCrea: RDD[(Array[Entity], degatMessage)] = rdd.flatMap(elem => {
+      var roll = rand.nextInt(20)+1
+      val msgs = new ArrayBuffer[(Array[Entity], degatMessage)]()
+
+      msgs += Tuple2(elem._2, degatMessage(roll, (elem._1.rangeMelee, elem._1.rangeDist), elem._1.Attack(roll), elem._1.getPrecision()))
+    }).cache()
   }
 }

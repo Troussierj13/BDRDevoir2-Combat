@@ -1,13 +1,20 @@
 package combatDevoir2
 
+import java.util
+
+import scala.collection.mutable.ArrayBuffer
+import scala.collection.JavaConverters._
 import scala.util.Random
 
-case class entityToFight(entity:Entity, vectorDir:(Float, Float), distance: Float)
+case class entityToFight(entity:Entity, vectorDir:(Float, Float), distance: Float) extends Ordered[entityToFight] {
+  def compare(that: entityToFight) =
+    this.distance.compareTo(that.distance)
+}
 
 trait Entity {
   var hp : Integer
-  def posX : Float
-  def posY : Float
+  var posX : Float
+  var posY : Float
   def name : String
   def hpMax : Integer
   def armor : Integer
@@ -18,9 +25,8 @@ trait Entity {
   def precision : Array[(Integer, Integer)]
   def treshold : Integer
   def rand : Random
-  def nextActionIsAttack : Boolean
 
-  def Behaviour(): Unit
+  def Behaviour(entitiesToFight: Array[entityToFight]): (Array[Entity], Array[Entity])
   def Attack(roll: Integer, isMelee : Boolean): Integer
   def Attack(roll: Integer): Array[(Integer, Integer)] = {
     var size = if(attackRollMelee.size>attackRollDist.size) attackRollMelee.size else attackRollDist.size
@@ -47,6 +53,34 @@ trait Entity {
 
 abstract class Enemy extends Entity {
   def speed : Integer = 0
+
+  override def Behaviour(entitiesToFight: Array[entityToFight]): (Array[Entity], Array[Entity]) = {
+    var fightableMelee = new util.ArrayList[Entity]
+    var fightableDist = new util.ArrayList[Entity]
+
+    entitiesToFight.foreach(entity => {
+      if(entity.distance<rangeMelee) {
+        fightableMelee.add(entity.entity)
+      }
+      else if(entity.distance<rangeDist) {
+        fightableDist.add(entity.entity)
+      }
+    })
+
+    if(fightableDist.size() <= 0 && fightableMelee.size() <= 0){
+      val target = entitiesToFight(0)
+      if(target.distance > speed) {
+        posX += target.vectorDir._1 * speed
+        posY += target.vectorDir._2 * speed
+      }
+      else {
+        posX += target.vectorDir._1 * target.distance
+        posY += target.vectorDir._2 * target.distance
+      }
+    }
+
+    (fightableMelee.asScala.toArray,fightableDist.asScala.toArray)
+  }
 }
 
 abstract class Ally extends Entity {
@@ -54,8 +88,8 @@ abstract class Ally extends Entity {
 
 case class WorgsRider(x: Float, y: Float) extends Enemy {
   override def name : String = "WorgsRider"
-  override def posX: Float = x
-  override def posY: Float = y
+  override var posX: Float = x
+  override var posY: Float = y
   override def hpMax : Integer = 13 + 2*(rand.nextInt(10) + 1) +2
   override def speed: Integer = 20
   override var hp: Integer = hpMax
@@ -67,7 +101,6 @@ case class WorgsRider(x: Float, y: Float) extends Enemy {
   override def precision : Array[(Integer, Integer)] = Array((6, 4))
   override def treshold: Integer = 20
   override def rand: Random = new Random()
-  override def nextActionIsAttack : Boolean = false
 
   override def Attack(roll: Integer, isMelee : Boolean): Integer = {
     var degat = 0;
@@ -87,16 +120,12 @@ case class WorgsRider(x: Float, y: Float) extends Enemy {
 
     degat
   }
-
-  override def Behaviour(): Unit = {
-
-  }
 }
 
 case class Warlord(x: Float, y: Float) extends Enemy {
   override def name : String = "Warlord"
-  override def posX: Float = x
-  override def posY: Float = y
+  override var posX: Float = x
+  override var posY: Float = y
   override def hpMax : Integer = 141 + 13 * (rand.nextInt(10)+1) + 65
   override def speed: Integer = 30
   override var hp: Integer = hpMax
@@ -108,7 +137,6 @@ case class Warlord(x: Float, y: Float) extends Enemy {
   override def precision : Array[(Integer, Integer)] = Array((20, 19), (15, 0), (10, 0))
   override def treshold: Integer = 19
   override def rand: Random = new Random()
-  override def nextActionIsAttack : Boolean = false
 
   override def Attack(roll: Integer, isMelee : Boolean): Integer = {
     var degat = 0
@@ -128,16 +156,12 @@ case class Warlord(x: Float, y: Float) extends Enemy {
 
     degat
   }
-
-  override def Behaviour(): Unit = {
-
-  }
 }
 
 case class Barbarian(x: Float, y: Float) extends Enemy {
   override def name : String = "Barbarian"
-  override def posX: Float = x
-  override def posY: Float = y
+  override var posX: Float = x
+  override var posY: Float = y
   override def hpMax: Integer = 142 + 11 * (rand.nextInt(12) + 1) + 65
   override def speed: Integer = 40
   override var hp: Integer = hpMax
@@ -149,7 +173,6 @@ case class Barbarian(x: Float, y: Float) extends Enemy {
   override def precision : Array[(Integer, Integer)] = Array((19, 16), (14, 11), (9, 6))
   override def treshold: Integer = 19
   override def rand: Random = new Random()
-  override def nextActionIsAttack : Boolean = false
 
   def Attack(roll: Integer, isMelee: Boolean): Integer = {
     var degat = 0
@@ -169,18 +192,14 @@ case class Barbarian(x: Float, y: Float) extends Enemy {
 
     degat
   }
-
-  override def Behaviour(): Unit = {
-
-  }
 }
 
 case class SolarAngel(x: Float, y: Float) extends Ally {
   def regeneration: Integer = 15
 
   override def name : String = "SolarAngel"
-  override def posX: Float = x
-  override def posY: Float = y
+  override var posX: Float = x
+  override var posY: Float = y
   override def hpMax : Integer = 363 + 22 *(rand.nextInt(10)+1)+242
   override var hp: Integer = hpMax
   override def armor: Integer = 44
@@ -191,7 +210,6 @@ case class SolarAngel(x: Float, y: Float) extends Ally {
   override def precision : Array[(Integer, Integer)] = Array((31, 35), (26, 30), (21, 25), (16, 20))
   override def treshold: Integer = 20
   override def rand: Random = new Random()
-  override def nextActionIsAttack : Boolean = false
 
   override def Attack(roll: Integer, isMelee : Boolean): Integer = {
     var degat = 0
@@ -213,7 +231,23 @@ case class SolarAngel(x: Float, y: Float) extends Ally {
     }
   }
 
-  override def Behaviour(): Unit = {
+  override def Behaviour(entitiesToFight: Array[entityToFight]): (Array[Entity], Array[Entity]) = {
+    var fightableMelee = new util.ArrayList[Entity]
+    var fightableDist = new util.ArrayList[Entity]
 
+    entitiesToFight.foreach(entity => {
+      if(entity.distance<rangeMelee) {
+        fightableMelee.add(entity.entity)
+      }
+      else if(entity.distance<rangeDist) {
+        fightableDist.add(entity.entity)
+      }
+    })
+
+    if(fightableDist.size() <= 0 && fightableMelee.size()<=0){
+      Regenerate()
+    }
+
+    (fightableMelee.asScala.toArray,fightableDist.asScala.toArray)
   }
 }

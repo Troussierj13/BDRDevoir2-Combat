@@ -1,11 +1,14 @@
 package combatDevoir2
 
 import java.util
+import java.util.Collections
 
+import combatDevoir2.MainClass.degatMessage
 import org.apache.spark.rdd.RDD
 import org.apache.spark.{SparkConf, SparkContext}
 
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.JavaConverters._
 import scala.util.Random
 
 case object MainClass extends App {
@@ -13,8 +16,6 @@ case object MainClass extends App {
   var rand = Random
 
   case class degatMessage(roll: Int, range: (Integer, Integer), degats: Array[(Integer, Integer)], precision: Array[(Integer, Integer)])
-
-
 
   override def main(args: Array[String]): Unit = {
     super.main(args)
@@ -30,12 +31,12 @@ case object MainClass extends App {
 
     //Ennemies
 
-    val barbarian1 = Barbarian(200, 20)
-    val barbarian2 = Barbarian(200, 10)
-    val barbarian3 = Barbarian(200, 0)
-    val barbarian4 = Barbarian(200, -10)
-    val barbarian5 = Barbarian(200, -20)
-    val barbarian6 = Barbarian(200, -30)
+    val barbarian1 = Barbarian(400, 20)
+    val barbarian2 = Barbarian(400, 10)
+    val barbarian3 = Barbarian(400, 0)
+    val barbarian4 = Barbarian(400, -10)
+    val barbarian5 = Barbarian(400, -20)
+    val barbarian6 = Barbarian(400, -30)
 
     //Graph
     val graph: Array[(Entity, Array[Entity])] = Array(
@@ -51,65 +52,48 @@ case object MainClass extends App {
     //RDD
     val rdd = sc.makeRDD(graph)
 
-    val messageDegatsCrea: RDD[(Array[Entity], degatMessage)] = rdd.flatMap(elem => {
+    //Boolean == true => attack melee
+    val messageDegatsCrea: RDD[(Array[Entity], (degatMessage, Boolean))] = rdd.flatMap(elem => {
       val roll = rand.nextInt(20)+1
-      var msgs = new ArrayBuffer[(Array[Entity], degatMessage)]()
-      var target = new ArrayBuffer[Entity]()
+      val degatM = degatMessage(roll, (elem._1.rangeMelee, elem._1.rangeDist), elem._1.Attack(roll), elem._1.precision)
+      var msgs = new ArrayBuffer[(Array[Entity], (degatMessage, Boolean))]()
 
-      var i:Int = 0
-      while(i < elem._1.precision.length && i < elem._2.length) {
-        target += elem._2(i)
-        i += 1
-      }
+      var target = elem._1.Behaviour(getEntityToFight(elem._1, elem._2).asScala.toArray)
 
-      getEntityToFight(elem._1,elem._2)
+      if(target._1.length > 0)
+        msgs += Tuple2(target._1, (degatM, true))
+      if(target._2.length > 0)
+        msgs += Tuple2(target._2, (degatM, false))
 
-      msgs += Tuple2(target.toArray, degatMessage(roll, (elem._1.rangeMelee, elem._1.rangeDist), elem._1.Attack(roll), elem._1.precision))
+      msgs
     }).cache()
-
-    //PRINT
-    PrintRDDMessageCrea(messageDegatsCrea)
-
   }
-
 
   def getEntityToFight(entity: Entity, tabSuivants: Array[Entity]): util.ArrayList[entityToFight] = {
     var listEntityToFigth = new util.ArrayList[entityToFight]
     val x = entity.posX
     val y = entity.posY
-    var vector: (Float, Float) = null
 
     tabSuivants.foreach(e=>{
-      vector = getVector(x,y,e.posX,e.posY)
-      listEntityToFigth.add(new entityToFight(e,vector,getDistance(vector).toFloat))
+      val vector = getVector((x,y),(e.posX,e.posY))
+      val distance = getDistance(vector)
+      listEntityToFigth.add(new entityToFight(e,vector,getDistance(vector)))
     })
-    var maxDist=0.0;
-    var iSaved = 0
-    do{
-      maxDist=listEntityToFigth.get(0).distance
-      for (i <- 0 to listEntityToFigth.size()-1) {
-        if(listEntityToFigth.get(i).distance > maxDist){
-          maxDist=listEntityToFigth.get(i).distance
-        }
-      }
 
-      for (i <- 0 to listEntityToFigth.size()-1) {
-        if(listEntityToFigth.get(i).distance == maxDist){
-          iSaved = i
-        }
-      }
-      listEntityToFigth.remove(iSaved)
-    }while(listEntityToFigth.size()>entity.precision.length)
+    Collections.sort(listEntityToFigth)
+
+    while(listEntityToFigth.size()>entity.precision.length){
+      listEntityToFigth.remove(entity.precision.length)
+    }
+
     listEntityToFigth
   }
 
-  private def getDistance(vector:(Float, Float)) ={
-    val distance = Math.sqrt(Math.pow(vector._1,2)+Math.pow(vector._2,2))
-    distance
+  private def getDistance(vector:(Float, Float)): Float ={
+    Math.sqrt(Math.pow(vector._1,2)+Math.pow(vector._2,2)).toFloat
   }
-  private def getVector(x1:Float, y1:Float,x2:Float, y2:Float): (Float, Float) ={
-    val vector:(Float, Float) = (Math.abs(x1+x2),Math.abs(y1+y2))
-    vector
+  private def getVector(vectorOrigin:(Float, Float), vectorTarget:(Float, Float)): (Float, Float) ={
+    (vectorTarget._1-vectorOrigin._1,vectorTarget._2-vectorOrigin._2)
   }
 
   def PrintRDDMessageCrea(rdd:RDD[(Array[Entity], degatMessage)]): Unit = {

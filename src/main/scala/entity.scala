@@ -59,15 +59,15 @@ abstract class Enemy extends Entity {
     var fightableDist = new util.ArrayList[Entity]
 
     entitiesToFight.foreach(entity => {
-      if(entity.distance<rangeMelee) {
+      if(entity.distance<rangeMelee & entity.entity.hp>0) {
         fightableMelee.add(entity.entity)
       }
-      else if(entity.distance<rangeDist) {
+      else if(entity.distance<rangeDist & entity.entity.hp>0) {
         fightableDist.add(entity.entity)
       }
     })
 
-    if(fightableDist.size() <= 0 && fightableMelee.size() <= 0){
+    if(fightableDist.size() <= 0 & fightableMelee.size() <= 0){
       val target = entitiesToFight(0)
       if(target.distance > speed) {
         posX += target.vectorDir._1 * speed
@@ -236,15 +236,15 @@ case class SolarAngel(x: Float, y: Float) extends Ally {
     var fightableDist = new util.ArrayList[Entity]
 
     entitiesToFight.foreach(entity => {
-      if(entity.distance<rangeMelee) {
+      if(entity.distance<rangeMelee & entity.entity.hp>0) {
         fightableMelee.add(entity.entity)
       }
-      else if(entity.distance<rangeDist) {
+      else if(entity.distance<rangeDist & entity.entity.hp>0) {
         fightableDist.add(entity.entity)
       }
     })
 
-    if(fightableDist.size() <= 0 && fightableMelee.size()<=0){
+    if(fightableDist.size() <= 0 & fightableMelee.size()<=0){
       Regenerate()
     }
 

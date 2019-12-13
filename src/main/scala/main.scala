@@ -31,12 +31,12 @@ case object MainClass extends App {
 
     //Ennemies
 
-    val barbarian1 = Barbarian(400, 20)
-    val barbarian2 = Barbarian(400, 10)
-    val barbarian3 = Barbarian(400, 0)
-    val barbarian4 = Barbarian(400, -10)
-    val barbarian5 = Barbarian(400, -20)
-    val barbarian6 = Barbarian(400, -30)
+    val barbarian1 = Barbarian(500, 20)
+    val barbarian2 = Barbarian(500, 10)
+    val barbarian3 = Barbarian(500, 0)
+    val barbarian4 = Barbarian(500, -10)
+    val barbarian5 = Barbarian(500, -20)
+    val barbarian6 = Barbarian(500, -30)
 
     //Graph
     val graph: Array[(Entity, Array[Entity])] = Array(
@@ -50,25 +50,117 @@ case object MainClass extends App {
     )
 
     //RDD
-    val rdd = sc.makeRDD(graph)
+    var rdd = sc.makeRDD(graph)
 
-    //Boolean == true => attack melee
-    val messageDegatsCrea: RDD[(Array[Entity], (degatMessage, Boolean))] = rdd.flatMap(elem => {
-      val roll = rand.nextInt(20)+1
-      val degatM = degatMessage(roll, (elem._1.rangeMelee, elem._1.rangeDist), elem._1.Attack(roll), elem._1.precision)
-      var msgs = new ArrayBuffer[(Array[Entity], (degatMessage, Boolean))]()
+    //Check de fin
+    var foundEnemy = false
+    var foundAlly = false
 
-      var target = elem._1.Behaviour(getEntityToFight(elem._1, elem._2).asScala.toArray)
+    do {
+      //Boolean == true => melee attack
+      val messageDegatsCreatures: RDD[(Array[Entity], (degatMessage, Boolean))] = rdd.flatMap(elem => {
+        val roll = rand.nextInt(20)+1
+        val degatM = degatMessage(roll, (elem._1.rangeMelee, elem._1.rangeDist), elem._1.Attack(roll), elem._1.precision)
+        var msgs = new ArrayBuffer[(Array[Entity], (degatMessage, Boolean))]()
 
-      if(target._1.length > 0)
-        msgs += Tuple2(target._1, (degatM, true))
-      if(target._2.length > 0)
-        msgs += Tuple2(target._2, (degatM, false))
+        //Recup Tuple2(cibleMelee: Array(Entity), cibleDistance: Array(Entity))
+        var target = elem._1.Behaviour(getEntityToFight(elem._1, elem._2).asScala.toArray)
 
-      msgs
-    }).cache()
+        if(target._1.length > 0)
+          msgs += Tuple2(target._1, (degatM, true))
+        if(target._2.length > 0)
+          msgs += Tuple2(target._2, (degatM, false))
+
+        msgs
+      })
+
+      // Creer un PairRDD (cible: Entity, degat: Integer)
+      // à partir du rdd qui contient (fightableEntity: Array(Entity), infoDegat: degatMessage, isMelee: Boolean)
+      var pairRDDCreatureDegat: RDD[(Entity, Integer)] = messageDegatsCreatures.flatMap(elem => {
+        var msgs = new ArrayBuffer[(Entity, Integer)]()
+
+        var iEntity = 0
+        var iDegat = 0
+        var degat = 0
+
+        //On parcourt les x attaques possible
+        elem._2._1.precision.foreach(p => {
+          //Si cible melee
+          if(elem._2._2) {
+            if (p._1 > 0) { // si precision >0 alors on peut attaquer
+              if (elem._1(iEntity).armor < p._1 + elem._2._1.roll) {  // On verifie que le lancer de dé + la précision > l'armure de la cible
+                degat += elem._2._1.degats(iDegat)._1
+              }
+              iDegat += 1
+              if (elem._1(iEntity).hp - degat <= 0) { // on verifie que les degat à appliqué tue la cible pour passer a la cible suivant et réinitialiser les dégats
+                iEntity += 1
+                degat = 0
+              }
+
+              if (degat > 0) { // si des dégats sont à appliquer alors on envoi un message de la forme (entityCible, 33)
+                msgs += Tuple2(elem._1(iEntity), degat)
+                degat = 0
+              }
+            }
+          }
+          else { //si cible distance
+            if (p._2 > 0) {
+              if (elem._1(iEntity).armor < p._2 + elem._2._1.roll) {
+                degat += elem._2._1.degats(iDegat)._2
+              }
+              iDegat += 1
+              if (elem._1(iEntity).hp - degat <= 0) {
+                iEntity += 1
+                degat = 0
+              }
+
+              if (degat > 0) {
+                msgs += Tuple2(elem._1(iEntity), degat)
+                degat = 0
+              }
+            }
+          }
+        })
+        msgs
+      })
+
+      //On reduce sur la creature tout les degats qu'elle a recu
+      val finalMessageDegat = pairRDDCreatureDegat.reduceByKey(_+_).collect()
+
+      //On applique les degats du pairRdd qui definit les degat que chaque cible a pris sur le graph
+      rdd = rdd.map(elem => {
+        finalMessageDegat.foreach(s => {
+          if (elem._1 == s._1) { // le l'entite courant de la map() == la clé du pairRDD, alors on inflige les degats
+            elem._1.hp -= s._2
+          }
+          println("Entity : " + elem._1 + ",       Pos = " + elem._1.posX + "," + elem._1.posY)
+        })
+
+        //TODO : Faire la même des degats infligé mais pour le déplacement
+
+        elem
+      }).cache()
+
+      foundEnemy = false
+      foundAlly = false
+
+      rdd.collect().foreach(elem => {
+        println("Entity : " + elem._1 + ",       HP = " + elem._1.hp)
+        if(elem._1.hp>0) {
+          elem._1 match {
+            case _: Enemy => foundEnemy = true
+            case _: Ally => foundAlly = true
+            case _ =>
+          }
+        }
+      })
+
+    } while(foundEnemy&foundAlly)
+
+    println("Finish")
   }
 
+  //Return les X cible les plus proche, X etant le nombre d'attaque possible
   def getEntityToFight(entity: Entity, tabSuivants: Array[Entity]): util.ArrayList[entityToFight] = {
     var listEntityToFigth = new util.ArrayList[entityToFight]
     val x = entity.posX
@@ -77,7 +169,7 @@ case object MainClass extends App {
     tabSuivants.foreach(e=>{
       val vector = getVector((x,y),(e.posX,e.posY))
       val distance = getDistance(vector)
-      listEntityToFigth.add(new entityToFight(e,vector,getDistance(vector)))
+      listEntityToFigth.add(new entityToFight(e,vector,distance))
     })
 
     Collections.sort(listEntityToFigth)
